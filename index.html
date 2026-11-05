@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Box Office vs. Buzz | Decibel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: masthead, view switcher, tile-grid map (12x8) with a detail rail; legend and method notes below. */
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --fg:#1d1c22; --muted:#5f5d68; --line:#dcdad3; --accent:#c2412d;
+  --ink-on-tile:#17161b;
+  --g-country:#d9b24a; --g-pop:#ea86a6; --g-rock:#8f9fd9; --g-soul:#b98ad9; --g-indie:#6cc3ae; --g-latin:#ef8350; --g-other:#aeb6a4; --g-none:#d6d4cd;
+  --f-display:"Anybody","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+.kicker{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--f-display);font-stretch:80%;font-weight:850;font-size:clamp(34px,6vw,60px);line-height:.95;margin:6px 0 10px;text-wrap:balance;letter-spacing:-.01em}
+.dek{max-width:64ch;color:var(--muted);margin:0}
+.switch{display:flex;flex-wrap:wrap;gap:8px}
+.switch button{font:500 14px var(--f-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+.switch button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.switch button:focus-visible,.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.viewnote{font-size:14px;color:var(--muted);max-width:70ch;margin:0}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:22px;align-items:start}
+@media (max-width:820px){.stage{grid-template-columns:1fr}}
+.mapbox{overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(42px,1fr));grid-auto-rows:minmax(42px,auto);gap:4px;min-width:540px}
+.tile{aspect-ratio:1;border:0;border-radius:3px;padding:4px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;color:var(--ink-on-tile);cursor:pointer;text-align:left;font-family:var(--f-mono);transition:transform .12s, opacity .2s}
+.tile .ab{font-weight:500;font-size:12px}
+.tile .gn{font-size:9.5px;line-height:1.1;opacity:.85;text-transform:uppercase;letter-spacing:.02em;word-break:break-word}
+.tile.dim{opacity:.28}
+.tile.sel{box-shadow:0 0 0 2px var(--fg)}
+.tile:hover{transform:translateY(-1px)}
+.hatch{background:repeating-linear-gradient(45deg,var(--g-none) 0 5px,transparent 5px 9px) !important;color:var(--fg)}
+.rail{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:12px}
+.rail h2{font-family:var(--f-display);font-stretch:90%;font-weight:800;font-size:26px;margin:0;line-height:1}
+.row{display:grid;gap:2px}
+.row .lab{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.row .val{font-weight:600}
+.row .sub{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.sw{width:14px;height:14px;border-radius:2px;display:inline-block}
+.tally{font-family:var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.notes{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:10px;font-size:13.5px;color:var(--muted);max-width:80ch}
+.notes h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg);margin:0}
+.notes p{margin:0}
+.notes a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.tile{transition:none}}
+*{box-sizing:border-box}body{margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Live music · state by state</div>
+    <h1>Box Office vs. Buzz</h1>
+    <p class="dek">What each state actually bought concert tickets for, next to the genre it is searching for most right now. Switch views, then tap any state for the details.</p>
+  </header>
+
+  <div class="switch" role="group" aria-label="Map view">
+    <button id="v-live" data-view="live" aria-pressed="true">Ticket sales</button>
+    <button id="v-buzz" data-view="buzz" aria-pressed="false">Search interest (2026)</button>
+    <button id="v-agree" data-view="agree" aria-pressed="false">Where they agree</button>
+  </div>
+  <p class="viewnote" id="viewnote"></p>
+
+  <div class="stage">
+    <div class="mapbox"><div class="grid" id="grid" aria-label="Tile map of US states"></div></div>
+    <aside class="rail" id="rail" aria-live="polite"></aside>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <section class="notes">
+    <h3>How this was built</h3>
+    <p><strong>Ticket sales:</strong> each state's top-selling concert act on Vivid Seats, 2014 through 2017, as published by Vivid Seats and Stacker, classified by the artist's primary genre (Beyoncé, Bruno Mars and Adele counted as pop). This is the most recent public, all-50-state live-ticket ranking we could find. It is older data and reflects one secondary marketplace.</p>
+    <p><strong>Search interest:</strong> SeatPick's Google Trends study of 18 genres over the 12 months ending Aug. 11, 2026. Each state gets the genre it searches for most <em>relative to other states</em>, not the genre with the most total searches. Delaware's result was not published. Coverage disagrees on Washington, D.C. (Latin in Parade's published list); treat it as unconfirmed. Kentucky's bluegrass counts as a country-family match.</p>
+    <p><strong>Families:</strong> to compare the two views, genres are grouped: country/bluegrass/folk; pop/EDM; rock/metal/punk; soul/R&B/hip-hop/jazz/blues/gospel; indie; Latin; other (classical, reggae).</p>
+    <p>Sources: <a href="https://stacker.com/stories/music/most-popular-live-music-act-every-state">Stacker / Vivid Seats</a> · <a href="https://www.yahoo.com/entertainment/music/articles/discover-surprising-top-music-genre-224500640.html">Parade on SeatPick</a> · <a href="https://www.hypebot.com/youll-never-guess-what-alaskas-most-searched-music-genre-is/">Hypebot on SeatPick</a> · <a href="https://www.mastercard.com/gb/en/news-and-trends/stories/2025/MEI-concert-spending-Live-Nation.html">Mastercard Economics Institute / Live Nation</a></p>
+  </section>
+</div>
+
+<script>
+const FAM = {
+  country:{label:"Country & roots",c:"--g-country"},
+  pop:{label:"Pop & dance",c:"--g-pop"},
+  rock:{label:"Rock, metal & punk",c:"--g-rock"},
+  soul:{label:"Soul, R&B, hip-hop & jazz",c:"--g-soul"},
+  indie:{label:"Indie",c:"--g-indie"},
+  latin:{label:"Latin",c:"--g-latin"},
+  other:{label:"Classical & reggae",c:"--g-other"},
+  none:{label:"Not published",c:"--g-none"}
+};
+const GF = {Country:"country",Bluegrass:"country",Folk:"country",Pop:"pop",EDM:"pop",Rock:"rock",Metal:"rock",Punk:"rock",Soul:"soul","R&B":"soul","Hip-hop":"soul",Jazz:"soul",Blues:"soul",Gospel:"soul",Indie:"indie",Latin:"latin",Classical:"other",Reggae:"other"};
+// [abbr, name, row, col, live act, runner-up, live genre, buzz genre]
+const S = [
+["AK","Alaska",0,0,"Luke Bryan","Zac Brown Band","Country","Metal"],
+["ME","Maine",0,11,"Elton John","Ed Sheeran","Rock","Metal"],
+["WI","Wisconsin",1,6,"Rolling Stones","Kenny Chesney","Rock","Metal"],
+["VT","Vermont",1,10,"Pentatonix","Neil Young","Pop","Classical"],
+["NH","New Hampshire",1,11,"Luke Bryan","Florida Georgia Line","Country","Metal"],
+["WA","Washington",2,1,"Garth Brooks","U2","Country","Pop"],
+["ID","Idaho",2,2,"Twenty One Pilots","Maroon 5","Rock","Metal"],
+["MT","Montana",2,3,"Garth Brooks","Luke Bryan","Country","Metal"],
+["ND","North Dakota",2,4,"Justin Bieber","Garth Brooks","Pop","Country"],
+["MN","Minnesota",2,5,"Metallica","Luke Bryan","Rock","Pop"],
+["IL","Illinois",2,6,"Beyoncé","U2","Pop","Soul"],
+["MI","Michigan",2,7,"Kid Rock","Eminem","Rock","Pop"],
+["NY","New York",2,9,"Billy Joel","Adele","Rock","Latin"],
+["MA","Massachusetts",2,10,"Kenny Chesney","Taylor Swift","Country","Indie"],
+["OR","Oregon",3,1,"Justin Bieber","Garth Brooks","Pop","Punk"],
+["NV","Nevada",3,2,"George Strait","Celine Dion","Country","EDM"],
+["WY","Wyoming",3,3,"Florida Georgia Line","Kenny Chesney","Country","Metal"],
+["SD","South Dakota",3,4,"Garth Brooks","Paul McCartney","Country","Country"],
+["IA","Iowa",3,5,"Garth Brooks","Ed Sheeran","Country","Pop"],
+["IN","Indiana",3,6,"Luke Bryan","Garth Brooks","Country","Pop"],
+["OH","Ohio",3,7,"Luke Bryan","Garth Brooks","Country","Metal"],
+["PA","Pennsylvania",3,8,"Beyoncé","Luke Bryan","Pop","Pop"],
+["NJ","New Jersey",3,9,"Coldplay","Taylor Swift","Rock","Pop"],
+["CT","Connecticut",3,10,"Luke Bryan","Ed Sheeran","Country","Pop"],
+["RI","Rhode Island",3,11,"Luke Bryan","Twenty One Pilots","Country","Indie"],
+["CA","California",4,1,"Beyoncé","Justin Bieber","Pop","Pop"],
+["UT","Utah",4,2,"Justin Bieber","Taylor Swift","Pop","Pop"],
+["CO","Colorado",4,3,"Justin Bieber","Eric Church","Pop","Indie"],
+["NE","Nebraska",4,4,"Garth Brooks","Taylor Swift","Country","Pop"],
+["MO","Missouri",4,5,"Garth Brooks","Taylor Swift","Country","Blues"],
+["KY","Kentucky",4,6,"Garth Brooks","Taylor Swift","Country","Bluegrass"],
+["WV","West Virginia",4,7,"Garth Brooks","Luke Bryan","Country","Country"],
+["VA","Virginia",4,8,"Luke Bryan","Florida Georgia Line","Country","Soul"],
+["MD","Maryland",4,9,"Beyoncé","Garth Brooks","Pop","Hip-hop"],
+["DE","Delaware",4,10,"Brantley Gilbert","Rascal Flatts","Country",null],
+["AZ","Arizona",5,2,"Adele","Garth Brooks","Pop","Pop"],
+["NM","New Mexico",5,3,"Garth Brooks","Luke Bryan","Country","Metal"],
+["KS","Kansas",5,4,"Garth Brooks","Luke Bryan","Country","Metal"],
+["AR","Arkansas",5,5,"Luke Bryan","Bruno Mars","Country","Rock"],
+["TN","Tennessee",5,6,"Garth Brooks","Adele","Country","Country"],
+["NC","North Carolina",5,7,"Luke Bryan","Taylor Swift","Country","Soul"],
+["SC","South Carolina",5,8,"Garth Brooks","Hootie & the Blowfish","Country","Soul"],
+["DC","Washington, D.C.",5,9,"Adele","Taylor Swift","Pop","Latin"],
+["OK","Oklahoma",6,4,"Garth Brooks","Luke Bryan","Country","Metal"],
+["LA","Louisiana",6,5,"Garth Brooks","Beyoncé","Country","Jazz"],
+["MS","Mississippi",6,6,"Chris Stapleton","Florida Georgia Line","Country","Gospel"],
+["AL","Alabama",6,7,"Jimmy Buffett","Florida Georgia Line","Rock","Soul"],
+["GA","Georgia",6,8,"Beyoncé","Taylor Swift","Pop","R&B"],
+["HI","Hawaii",7,0,"Bruno Mars","Janet Jackson","Pop","Reggae"],
+["TX","Texas",7,4,"Beyoncé","George Strait","Pop","Pop"],
+["FL","Florida",7,9,"Justin Bieber","Garth Brooks","Pop","Latin"]
+];
+const famLive = s => GF[s[6]];
+const famBuzz = s => s[7] ? GF[s[7]] : "none";
+const NOTES = {
+  live:"Genre of the top-selling concert act in each state, Vivid Seats ticket sales 2014–2017.",
+  buzz:"Genre each state searches for most relative to the rest of the country, Google Trends via SeatPick, Aug. 2025–Aug. 2026.",
+  agree:"States where the ticket-sales genre and the 2026 search genre fall in the same family. Faded tiles disagree."
+};
+let view="live", sel="TN";
+const grid=document.getElementById("grid"), rail=document.getElementById("rail");
+const css = v => `var(${v})`;
+S.forEach(s=>{
+  const b=document.createElement("button");
+  b.className="tile"; b.id="t-"+s[0];
+  b.style.gridRow=s[2]+1; b.style.gridColumn=s[3]+1;
+  b.innerHTML=`<span class="ab">${s[0]}</span><span class="gn"></span>`;
+  b.setAttribute("aria-label",s[1]);
+  b.addEventListener("click",()=>{sel=s[0];render();});
+  b.addEventListener("mouseenter",()=>{sel=s[0];renderRail();mark();});
+  grid.appendChild(b);
+});
+function mark(){S.forEach(s=>document.getElementById("t-"+s[0]).classList.toggle("sel",s[0]===sel));}
+function render(){
+  document.querySelectorAll(".switch button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===view));
+  document.getElementById("viewnote").textContent=NOTES[view];
+  const counts={};
+  S.forEach(s=>{
+    const t=document.getElementById("t-"+s[0]); const gn=t.querySelector(".gn");
+    t.classList.remove("hatch","dim");
+    let f, label;
+    if(view==="live"){f=famLive(s);label=s[6];}
+    else if(view==="buzz"){f=famBuzz(s);label=s[7]||"n/a";}
+    else{f=famBuzz(s);label=s[7]||"n/a"; const ok=s[7]&&famLive(s)===famBuzz(s); if(!ok)t.classList.add("dim"); else counts.__agree=(counts.__agree||0)+1;}
+    if(f==="none")t.classList.add("hatch"); else t.style.background=css(FAM[f].c);
+    gn.textContent=label;
+    counts[f]=(counts[f]||0)+1;
+  });
+  const lg=document.getElementById("legend"); lg.innerHTML="";
+  if(view==="agree"){
+    lg.innerHTML=`<span class="tally">${counts.__agree} of 50 states with both results match by genre family</span>`;
+  } else {
+    Object.keys(FAM).filter(k=>counts[k]).sort((a,b)=>counts[b]-counts[a]).forEach(k=>{
+      const sp=document.createElement("span");
+      sp.innerHTML=`<i class="sw ${k==="none"?"hatch":""}" style="${k==="none"?"":"background:"+css(FAM[k].c)}"></i>${FAM[k].label} <b class="tally">${counts[k]}</b>`;
+      lg.appendChild(sp);
+    });
+  }
+  mark(); renderRail();
+}
+function renderRail(){
+  const s=S.find(x=>x[0]===sel);
+  const match = s[7] ? (famLive(s)===famBuzz(s)) : null;
+  rail.innerHTML=`<h2>${s[1]}</h2>
+  <div class="row"><span class="lab">Top-selling concert act, 2014–17</span><span class="val">${s[4]}</span><span class="sub">${s[6]} · runner-up ${s[5]}</span></div>
+  <div class="row"><span class="lab">Most-searched genre, 2026</span><span class="val">${s[7]||"Not published"}</span><span class="sub">${s[7]?FAM[famBuzz(s)].label:"SeatPick did not release Delaware's result"}</span></div>
+  <div><span class="badge">${match===null?"No comparison":match?"Box office and buzz agree":"Box office and buzz split"}</span></div>`;
+}
+document.querySelectorAll(".switch button").forEach(b=>b.addEventListener("click",()=>{view=b.dataset.view;render();}));
+render();
+</script>
+</body>
+</html>
